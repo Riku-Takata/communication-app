@@ -1,40 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/pages/api-reference/create-next-app).
+# DXCと5階の研究室間のコミュニケーションを促すための感情の起伏を利用したコミュニケーション状態可視化システムの提案
+## 背景
+私はここ2ヶ月研究室に平日も休日も来ていて感じたことがある。それは「**この研究室のメンバー、全然仲良くないんじゃないか？？**」ということだ。
+研究室は中央棟の5階とDXセンターの2つにワークスペースを持っている。それぞれのワークスペースで日々活動するメンバーが固定されていることから、研究室内のコミュニケーションは決まったメンバーでしか行われていない問題を抱えている。
+そんな状態でさまざまな人に対するWell Beingを向上させることを研究することができるのか？そんな状態では決まったメンバーにしか刺さらない自己満足の研究しかできないのではないか？
+そこで私はワークスペースの違う研究室のメンバーとのコミュニケーションを促進したいと考えている。
 
-## Getting Started
+## 情報システムの概要
+制作物のテーマとして、「**写真とコミュニケーション量を組み合わせて、コミュニケーションをとっていないことに罪悪感を感じさせる（コミュニケーションの必要性を訴える）ようにすれば、コミュニケーションを取るようになるのではないか**」と考えてシステム開発を行った。
 
-First, run the development server:
+「コミュニケーションを促進させるために、何かのツールを作って使ってもらうことでコミュニケーションを促進する」というのは、逆にいえば「ツールを使わないとコミュニケーションは促進されない」ということであり、まず使いたいと当人に思わせることが必要である。
+それでは根本的にその人がコミュニケーション取りたいと思う動機づけとしては弱いと考え、もっと感情的に訴えて心理的にメンバーが「コミュニケーションを取りたいな」と思わせるにはどうしたらいいか。そこで**罪悪感**を利用します。
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+コミュニケーションが足りていないことに罪悪感を感じさせるようにすれば、自然と心理的にコミュニケーションしないといけないな、というような形に当人たちのマインドを変化させ、コミュニケーションを促進させることができるのではないかと考えた。
+その感情を揺さぶる方法として、コミュニケーションをとっていない人が悲しそうな写真で見てくることで、罪悪感を与えることができるのではないかと考えている。（ここの科学的証明があれば探してみる）
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## システムの詳細
+**画面にノード（頂点）とエッジ（辺）を用いた3Dネットワークグラフの人物相関図を表示し、ノードの部分を人の名前と画像にして、エッジの太さや色を変化させてコミュニケーションの量を可視化すること**を考えている。
 
-You can start editing the page by modifying `pages/index.tsx`. The page auto-updates as you edit the file.
+そしてその可視化したものを自然と目に入るようにモニターに常に表示させておけば良いのではないかと考えている。
+さらに、コミュニケーションの状態を常に表示するだけのWebアプリと入力も受け付ける用のWebアプリの両面の機能を持つアプリを作成し、日常的に目の入る位置にコミュニケーション状態を可視化させることができると考えている。
+入力を受け付ける側はブラウザで動かすことができるアプリケーションとして実装ができると考えており、入力が必要なパターンとしては、
 
-[API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) can be accessed on [http://localhost:3000/api/hello](http://localhost:3000/api/hello). This endpoint can be edited in `pages/api/hello.ts`.
+1. 雑談をしに移動する
+2. 雑談する
+3. 雑談後に雑談相手のWebアプリ上のノードの顔写真をクリック or Slackと連携させてSlackから入力する
+4. 入力後に顔写真を笑顔にしたりエッジの色などを変化させる
 
-The `pages/api` directory is mapped to `/api/*`. Files in this directory are treated as [API routes](https://nextjs.org/docs/pages/building-your-application/routing/api-routes) instead of React pages.
-
-This project uses [`next/font`](https://nextjs.org/docs/pages/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn-pages-router) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/pages/building-your-application/deploying) for more details.
+という流れの処理を想定している。
