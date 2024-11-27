@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import dbConnect from '../../utils/dbConnect'
-import Member from '../../models/Member'
+import Member from '@/models/Member'
 import bcrypt from 'bcrypt'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -16,6 +16,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const members = await Member.find()
         res.status(200).json(members)
       } catch (error) {
+        console.error('error:', error);
         res.status(500).json({ message: 'サーバーエラー' })
       }
       break
@@ -30,6 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await newMember.save()
         res.status(201).json(newMember)
       } catch (error) {
+        console.error('error:', error);
         res.status(400).json({ message: 'メンバーの作成に失敗しました' })
       }
       break

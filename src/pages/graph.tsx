@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
-import axios from 'axios'
 
 // サーバーサイドレンダリングを避けるために動的インポート
 const NetworkGraph = dynamic(() => import('../components/NetworkGraph'), { ssr: false })
@@ -10,13 +9,6 @@ const NetworkGraph = dynamic(() => import('../components/NetworkGraph'), { ssr: 
 interface Member {
   _id: string
   name: string
-}
-
-interface Communication {
-  _id: string
-  from: Member
-  to: Member
-  timestamp: string
 }
 
 const GraphPage = () => {

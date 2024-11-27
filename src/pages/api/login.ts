@@ -2,7 +2,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import dbConnect from '../../utils/dbConnect'
-import Member from '../../models/Member'
+import Member from '@/models/Member'
 import bcrypt from 'bcrypt'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -28,6 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // 本来はJWTトークンやセッションを発行するべきですが、ここでは簡略化します
         res.status(200).json({ message: 'ログイン成功', member })
       } catch (error) {
+        console.error('error:', error);
         res.status(500).json({ message: 'サーバーエラー' })
       }
       break

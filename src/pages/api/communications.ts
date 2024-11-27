@@ -2,8 +2,9 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next'
 import dbConnect from '../../utils/dbConnect'
-import Communication from '../../models/Communication'
-import Member from '../../models/Member'
+import Communication from '@/models/Communication'
+import Member from '@/models/Member'
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { method } = req
@@ -16,6 +17,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const communications = await Communication.find().populate('from').populate('to')
         res.status(200).json(communications)
       } catch (error) {
+        console.error('error:', error);
         res.status(500).json({ message: 'サーバーエラー' })
       }
       break
@@ -39,6 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await communication.save()
         res.status(201).json(communication)
       } catch (error) {
+        console.error('error:', error);
         res.status(400).json({ message: 'コミュニケーションの記録に失敗しました' })
       }
       break

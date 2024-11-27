@@ -9,10 +9,6 @@ interface Member {
   name: string
 }
 
-interface CommunicationInputProps {
-  user: Member
-}
-
 const CommunicationInput = () => {
   const [members, setMembers] = useState<Member[]>([])
   const [toMember, setToMember] = useState('')

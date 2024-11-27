@@ -100,7 +100,7 @@ interface NetworkGraphProps {
   user: Member
 }
 
-const NetworkGraph: React.FC<NetworkGraphProps> = ({ user }) => {
+const NetworkGraph: React.FC<NetworkGraphProps> = () => {
   const [members, setMembers] = useState<Member[]>([])
   const [communications, setCommunications] = useState<Communication[]>([])
   const [selectedNode, setSelectedNode] = useState<string | null>(null)
@@ -154,16 +154,16 @@ const NetworkGraph: React.FC<NetworkGraphProps> = ({ user }) => {
   }, [nodePositions])
 
   // コミュニケーション量の計算
-  const communicationCounts = useMemo(() => {
-    const counts: { [key: string]: number } = {}
-    communications.forEach(comm => {
-      const fromId = comm.from._id
-      const toId = comm.to._id
-      counts[fromId] = (counts[fromId] || 0) + 1
-      counts[toId] = (counts[toId] || 0) + 1
-    })
-    return counts
-  }, [communications])
+  // const communicationCounts = useMemo(() => {
+  //   const counts: { [key: string]: number } = {}
+  //   communications.forEach(comm => {
+  //     const fromId = comm.from._id
+  //     const toId = comm.to._id
+  //     counts[fromId] = (counts[fromId] || 0) + 1
+  //     counts[toId] = (counts[toId] || 0) + 1
+  //   })
+  //   return counts
+  // }, [communications])
 
   // エッジデータの作成
   const edges = useMemo(() => {
