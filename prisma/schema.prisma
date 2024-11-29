@@ -1,0 +1,30 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Member {
+  id        Int         @id @default(autoincrement()) // Primary Key
+  name      String
+  image1    String?     // オプションの画像1
+  image2    String?     // オプションの画像2
+
+  sent      Communication[] @relation("Sender")
+  received  Communication[] @relation("Receiver")
+}
+
+model Communication {
+  id          Int      @id @default(autoincrement()) // Primary Key
+  senderId    Int
+  receiverId  Int
+  dateTime    DateTime
+
+  sender      Member   @relation("Sender", fields: [senderId], references: [id])
+  receiver    Member   @relation("Receiver", fields: [receiverId], references: [id])
+}
