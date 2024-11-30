@@ -1,5 +1,4 @@
 // pages/index.tsx
-// import CommunicationForm from "@/components/CommunicationForm";
 import type { NextPage } from "next";
 import dynamic from "next/dynamic";
 
@@ -11,10 +10,9 @@ const NetworkGraph = dynamic(() => import("../components/NetworkGraph"), {
 const Home: NextPage = () => {
   return (
     <div>
-      <h1 style={{ color: "white", textAlign: "center", marginTop: "20px" }}>
+      <h1>
         Welcome to the Network Graph
       </h1>
-      {/* <CommunicationForm /> */}
       <NetworkGraph />
     </div>
   );
