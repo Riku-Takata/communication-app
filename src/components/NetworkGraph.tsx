@@ -48,13 +48,18 @@ const NetworkGraph: React.FC = () => {
     const nodeY = node.y ?? 0;
     const nodeZ = node.z ?? 0;
     const distRatio =
-      1 + distance / Math.hypot(nodeX || 0.01, nodeY || 0.01, nodeZ || 0.01);
+      1 + distance / Math.hypot(nodeX || 0.1, nodeY || 0.1, nodeZ || 0.1);
 
     fgRef.current?.cameraPosition(
       { x: nodeX * distRatio, y: nodeY * distRatio, z: nodeZ * distRatio },
       { x: nodeX, y: nodeY, z: nodeZ },
       1000
     );
+  };
+
+  // ノードのIDを取得するヘルパー関数
+  const getNodeId = (node: number | NodeObject) => {
+    return typeof node === 'object' ? node.id : node;
   };
 
   return (
@@ -68,13 +73,19 @@ const NetworkGraph: React.FC = () => {
 
         // ノードに接続されているリンクを取得（nodeがsourceで、targetがid=1）
         const connectedLink = graphData.links.find(
-          (link) =>
-            (link.source === node.id && link.target === 1) ||
-            (link.target === node.id && link.source === 1)
+          (link) => {
+            const sourceId = getNodeId(link.source);
+            const targetId = getNodeId(link.target);
+
+            return (
+              (sourceId === node.id && targetId === 1) ||
+              (targetId === node.id && sourceId === 1)
+            );
+          }
         );
 
         // 接続されているリンクがない場合はデフォルトのサイズを返す
-        if (!connectedLink) return 5;
+        if (!connectedLink) return 3;
 
         // エッジの距離を計算
         const normalizedValue =
@@ -89,7 +100,7 @@ const NetworkGraph: React.FC = () => {
         if (distance < threshold) {
           return 1; // サイズを小さく設定
         } else {
-          return 5; // デフォルトのサイズ
+          return 3; // デフォルトのサイズ
         }
       }}
       nodeColor={(node) => {
@@ -98,9 +109,15 @@ const NetworkGraph: React.FC = () => {
 
         // ノードに接続されているリンクを取得（nodeがsourceで、targetがid=1）
         const connectedLink = graphData.links.find(
-          (link) =>
-            (link.source === node.id && link.target === 1) ||
-            (link.target === node.id && link.source === 1)
+          (link) => {
+            const sourceId = getNodeId(link.source);
+            const targetId = getNodeId(link.target);
+
+            return (
+              (sourceId === node.id && targetId === 1) ||
+              (targetId === node.id && sourceId === 1)
+            );
+          }
         );
 
         // 接続されているリンクがない場合はグレーを返す
