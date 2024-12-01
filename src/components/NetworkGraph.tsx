@@ -1,100 +1,145 @@
-"use client";
+// src/components/NetworkGraph.tsx
 
-import { supabase } from "@/lib/SupabaseClient";
-import React, { useRef, useState, useEffect, useCallback } from "react";
-import ForceGraph3D, { ForceGraphMethods, LinkObject } from "react-force-graph-3d";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ForceGraph3D, { ForceGraphMethods } from 'react-force-graph-3d';
+import { GraphData, NodeObject, LinkObject } from '../types/graph';
+import { fetchGraphData } from '../utils/transformGraphData';
 
-type GraphNode = {
-  id: string;
-  name: string;
-  communicationCount?: number;
-  x: number;
-  y: number;
-  z: number;
-};
+const NetworkGraph: React.FC = () => {
+  const fgRef = useRef<ForceGraphMethods<NodeObject, LinkObject>>();
 
-type GraphLink = {
-  source: string;
-  target: string;
-  value: number;
-};
+  const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
+  const [isFocused, setIsFocused] = useState(false);
 
-const NetworkGraph = () => {
-  const fgRef = useRef<ForceGraphMethods<GraphNode, LinkObject<GraphNode, GraphLink>> | undefined>();
-  const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({
-    nodes: [],
-    links: [],
-  });
-  const [focusedNode, setFocusedNode] = useState<string | null>(null);
+  // コミュニケーション量の最小・最大値を計算
+  const volumes = useMemo(() => graphData.links.map((link) => link.value), [graphData.links]);
+  const minVolume = useMemo(() => (volumes.length > 0 ? Math.min(...volumes) : 0), [volumes]);
+  const maxVolume = useMemo(() => (volumes.length > 0 ? Math.max(...volumes) : 0), [volumes]);
 
-  const fetchGraphData = async () => {
-    try {
-      const { data: members } = await supabase.from("members").select("*");
-      const { data: communications } = await supabase.from("communications").select("*");
-
-      const nodes = (members || []).map((member: { id: string; name: string }) => ({
-        id: member.id,
-        name: member.name,
-        communicationCount: 0,
-        x: Math.random() * 100 - 50,
-        y: Math.random() * 100 - 50,
-        z: Math.random() * 100 - 50,
-      }));
-
-      const links = (communications || []).map((comm: { sender_id: string; receiver_id: string; communication_count: number }) => ({
-        source: comm.sender_id,
-        target: comm.receiver_id,
-        value: comm.communication_count,
-      }));
-
-      links.forEach((link) => {
-        const node = nodes.find((n) => n.id === link.source || n.id === link.target);
-        if (node) {
-          node.communicationCount = (node.communicationCount || 0) + link.value;
-        }
-      });
-
-      setGraphData({ nodes, links });
-    } catch (error) {
-      console.error("Error fetching graph data", error);
-    }
-  };
+  // エッジの最小・最大長を定義
+  const minDistance = 10; // 最小のエッジ長
+  const maxDistance = 200; // 最大のエッジ長
 
   useEffect(() => {
-    fetchGraphData();
+    // データを取得してセット
+    fetchGraphData().then((data) => setGraphData(data));
   }, []);
 
-  const handleClick = useCallback((node: GraphNode) => {
-    setFocusedNode(node.id);
+  // コミュニケーション量に応じたエッジの長さを設定
+  useEffect(() => {
+    if (fgRef.current && graphData.links.length > 0) {
+      // d3Force を使用してリンクの距離を設定
+      fgRef.current
+        .d3Force('link')
+        ?.distance((link: LinkObject) => {
+          const normalizedValue =
+            (link.value - minVolume) / (maxVolume - minVolume || 1);
+          return minDistance + (maxDistance - minDistance) * normalizedValue;
+        });
 
-    if (fgRef.current) {
-      const distance = 40;
-      const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
-
-      fgRef.current.cameraPosition(
-        { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
-        node,
-        3000
-      );
+      // シミュレーションを再起動
+      fgRef.current.d3ReheatSimulation();
     }
-  }, []);
+  }, [graphData, minVolume, maxVolume]);
+
+  const focusOnNode = (node: NodeObject) => {
+    const distance = 80;
+    const nodeX = node.x ?? 0;
+    const nodeY = node.y ?? 0;
+    const nodeZ = node.z ?? 0;
+    const distRatio =
+      1 + distance / Math.hypot(nodeX || 0.01, nodeY || 0.01, nodeZ || 0.01);
+
+    fgRef.current?.cameraPosition(
+      { x: nodeX * distRatio, y: nodeY * distRatio, z: nodeZ * distRatio },
+      { x: nodeX, y: nodeY, z: nodeZ },
+      1000
+    );
+  };
 
   return (
-    <div style={{ height: "100vh", width: "100%" }}>
-      <ForceGraph3D
-        ref={fgRef}
-        graphData={graphData}
-        nodeRelSize={2} // 基準サイズを指定（固定値）
-        nodeVal={(node: GraphNode) => 1 + Math.sqrt(node.communicationCount || 1) * 200} // サイズを動的に変更
-        linkWidth={(link: GraphLink) => Math.log2(link.value + 1)} // リンクの幅を通信量に応じて変更
-        linkColor={(link: GraphLink) =>
-          `rgba(0, 0, 255, ${Math.min(link.value / 10, 1)} * 100)`
-        } // リンクの透明度を通信量に応じて調整
-        nodeLabel={(node: GraphNode) => `${node.name} (${node.communicationCount || 0})`}
-        nodeColor={(node: GraphNode) => (node.id === focusedNode ? "yellow" : "red")}
-        onNodeClick={handleClick}
-      />
-    </div>
+    <ForceGraph3D<NodeObject, LinkObject>
+      ref={fgRef}
+      graphData={graphData}
+      nodeLabel="name"
+      nodeVal={(node) => {
+        // IDが1のノードはサイズを大きくする
+        if (node.id === 1) return 3;
+
+        // ノードに接続されているリンクを取得（nodeがsourceで、targetがid=1）
+        const connectedLink = graphData.links.find(
+          (link) =>
+            (link.source === node.id && link.target === 1) ||
+            (link.target === node.id && link.source === 1)
+        );
+
+        // 接続されているリンクがない場合はデフォルトのサイズを返す
+        if (!connectedLink) return 5;
+
+        // エッジの距離を計算
+        const normalizedValue =
+          (connectedLink.value - minVolume) / (maxVolume - minVolume || 1);
+        const distance =
+          minDistance + (maxDistance - minDistance) * normalizedValue;
+
+        // エッジ長の中間値をしきい値として設定
+        const threshold = (minDistance + maxDistance) / 2;
+
+        // エッジ長がしきい値より小さい場合はサイズを小さく
+        if (distance < threshold) {
+          return 1; // サイズを小さく設定
+        } else {
+          return 5; // デフォルトのサイズ
+        }
+      }}
+      nodeColor={(node) => {
+        // IDが1のノードは青色
+        if (node.id === 1) return 'blue';
+
+        // ノードに接続されているリンクを取得（nodeがsourceで、targetがid=1）
+        const connectedLink = graphData.links.find(
+          (link) =>
+            (link.source === node.id && link.target === 1) ||
+            (link.target === node.id && link.source === 1)
+        );
+
+        // 接続されているリンクがない場合はグレーを返す
+        if (!connectedLink) return 'gray';
+
+        // エッジの距離を計算
+        const normalizedValue =
+          (connectedLink.value - minVolume) / (maxVolume - minVolume || 1);
+        const distance =
+          minDistance + (maxDistance - minDistance) * normalizedValue;
+
+        // エッジ長の中間値をしきい値として設定
+        const threshold = (minDistance + maxDistance) / 2;
+
+        // エッジ長がしきい値より小さい場合は赤色、そうでなければ緑色を返す
+        if (distance < threshold) {
+          return 'red';
+        } else {
+          return 'green';
+        }
+      }}
+      onEngineStop={() => {
+        if (!isFocused && graphData.nodes.length > 0) {
+          // 1ミリ秒後にIDが1のノードにフォーカス
+          setTimeout(() => {
+            const node = graphData.nodes.find((node) => node.id === 1);
+            if (
+              node &&
+              node.x !== undefined &&
+              node.y !== undefined &&
+              node.z !== undefined
+            ) {
+              focusOnNode(node);
+              setIsFocused(true);
+            }
+          }, 1); // 1ミリ秒の遅延
+        }
+      }}
+    />
   );
 };
 
