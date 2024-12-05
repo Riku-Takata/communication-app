@@ -4,21 +4,21 @@ import { supabase } from '../lib/SupabaseClient';
 import { GraphData, NodeObject, LinkObject } from '../types/graph';
 
 export const fetchGraphData = async (): Promise<GraphData> => {
-  // sender_id が 1 のコミュニケーションのみ取得
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7); // 1週間前の日付を計算
+
+  // 過去1週間のコミュニケーションデータを取得
   const { data: communicationsData, error: commError } = await supabase
     .from('communication')
     .select('*')
-    .eq('sender_id', 1);
+    .gte('communication_date', oneWeekAgo.toISOString());
 
   if (commError) {
     console.error('Error fetching communications:', commError);
     return { nodes: [], links: [] };
   }
 
-  // 受信者のメンバーIDを取得
-  const receiverIds = communicationsData?.map(comm => comm.receiver_id) || [];
-
-  // sender_id が 1 のメンバー情報を取得
+  // ノードとリンクの作成
   const { data: senderData, error: senderError } = await supabase
     .from('member')
     .select('*')
@@ -29,7 +29,8 @@ export const fetchGraphData = async (): Promise<GraphData> => {
     return { nodes: [], links: [] };
   }
 
-  // 受信者のメンバー情報を取得
+  const receiverIds = communicationsData?.map(comm => comm.receiver_id) || [];
+
   const { data: receiversData, error: receiversError } = await supabase
     .from('member')
     .select('*')
@@ -40,7 +41,6 @@ export const fetchGraphData = async (): Promise<GraphData> => {
     return { nodes: [], links: [] };
   }
 
-  // ノードの作成
   const senderNode: NodeObject = {
     id: senderData[0].id,
     name: senderData[0].name,
@@ -55,12 +55,18 @@ export const fetchGraphData = async (): Promise<GraphData> => {
 
   const nodes = [senderNode, ...receiverNodes];
 
-  // リンクの作成
-  const links: LinkObject[] = (communicationsData || []).map(comm => ({
-    source: comm.sender_id,
-    target: comm.receiver_id,
-    value: comm.communication_volume,
-  }));
+  // コミュニケーション量を集計してリンクを作成
+  const links: LinkObject[] = receiverNodes.map(receiver => {
+    const totalVolume = (communicationsData || [])
+      .filter(comm => comm.receiver_id === receiver.id)
+      .reduce((sum, comm) => sum + comm.communication_volume, 0);
+
+    return {
+      source: senderNode.id,
+      target: receiver.id,
+      value: totalVolume,
+    };
+  });
 
   return { nodes, links };
 };

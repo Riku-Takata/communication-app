@@ -1,3 +1,4 @@
+// src/lib/SupabaseClient.ts
 import { createClient } from "@supabase/supabase-js";
 
 // 環境変数からSupabase URLとキーを取得

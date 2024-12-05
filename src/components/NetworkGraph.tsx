@@ -5,6 +5,7 @@ import ForceGraph3D, { ForceGraphMethods } from 'react-force-graph-3d';
 import * as THREE from 'three'; // Three.js をインポート
 import { GraphData, NodeObject, LinkObject } from '../types/graph';
 import { fetchGraphData } from '../utils/transformGraphData';
+import { supabase } from '@/lib/SupabaseClient';
 
 const NetworkGraph: React.FC = () => {
   const fgRef = useRef<ForceGraphMethods<NodeObject, LinkObject>>();
@@ -23,8 +24,36 @@ const NetworkGraph: React.FC = () => {
   const maxVolume = useMemo(() => (volumes.length > 0 ? Math.max(...volumes) : 0), [volumes]);
 
   // エッジの最小・最大長を定義
-  const minDistance = 2; // 最小のエッジ長
-  const maxDistance = 200; // 最大のエッジ長
+  const minDistance = 10; // 最小のエッジ長
+  const maxDistance = 80; // 最大のエッジ長
+
+  useEffect(() => {
+    // 初期データの取得
+    const loadData = async () => {
+      const data = await fetchGraphData();
+      setGraphData(data);
+    };
+    loadData();
+
+    // リアルタイムリスナーの設定
+    const communicationListener = supabase
+      .channel('public:communication')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'communication' },
+        (payload) => {
+          console.log('Change received!', payload);
+          // データの再取得
+          loadData();
+        }
+      )
+      .subscribe();
+
+    // クリーンアップ関数
+    return () => {
+      supabase.removeChannel(communicationListener);
+    };
+  }, []);
 
   useEffect(() => {
     // データを取得してセット
@@ -49,7 +78,7 @@ const NetworkGraph: React.FC = () => {
   }, [graphData, minVolume, maxVolume]);
 
   const focusOnNode = (node: NodeObject) => {
-    const distance = 40;
+    const distance = 80;
     const nodeX = node.x ?? 0;
     const nodeY = node.y ?? 0;
     const nodeZ = node.z ?? 0;
@@ -98,7 +127,7 @@ const NetworkGraph: React.FC = () => {
           minDistance + (maxDistance - minDistance) * normalizedValue;
 
         // エッジ長の中間値をしきい値として設定
-        const threshold = (minDistance + maxDistance) / 2;
+        const threshold = (minDistance + maxDistance) / 3;
 
         // エッジ長がしきい値より小さい場合はサイズを小さく
         if (distance < threshold) {
@@ -115,58 +144,62 @@ const NetworkGraph: React.FC = () => {
         return 'gray';
       }}
       nodeThreeObject={(node) => {
+        // ノード全体をまとめるグループを作成
+        const group = new THREE.Group();
+      
         if (node.id === 1) {
-          // IDが1のノードはカスタムの青い球体を作成
-          const sphereGeometry = new THREE.SphereGeometry(5, 32, 32);
-          const sphereMaterial = new THREE.MeshBasicMaterial({ color: 'blue' });
+          // ID=1の場合は青い球体を作成
+          const sphereGeometry = new THREE.SphereGeometry(5, 32, 32); // 球体のサイズと分割数
+          const sphereMaterial = new THREE.MeshBasicMaterial({ color: 'blue' }); // 青色のマテリアル
           const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-          return sphere as THREE.Object3D;
+          group.add(sphere);
         } else {
-          // ノードに接続されているリンクを取得（nodeがsourceで、targetがid=1）
+          // その他のノードは画像で表示
           const connectedLink = graphData.links.find((link) => {
             const sourceId = getNodeId(link.source);
             const targetId = getNodeId(link.target);
-
             return (
               (sourceId === node.id && targetId === 1) ||
               (targetId === node.id && sourceId === 1)
             );
           });
-
-          // 接続されているリンクがない場合はデフォルトの画像を使用
-          if (!connectedLink) {
-            // smile_sun.jpg を使用
-            const spriteMaterial = new THREE.SpriteMaterial({ map: sunTexture });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(12, 12, 1); // スプライトのサイズを調整
-            return sprite as THREE.Object3D;
-          }
-
-          // エッジの距離を計算
-          const normalizedValue =
-            (connectedLink.value - minVolume) / (maxVolume - minVolume || 1);
-          const distance =
-            minDistance + (maxDistance - minDistance) * normalizedValue;
-
-          // エッジ長の中間値をしきい値として設定
-          const threshold = (minDistance + maxDistance) / 2;
-
-          // エッジ長がしきい値より小さい場合は cry_girl.png を使用
-          if (distance < threshold) {
-            // cry_girl.png を使用
-            const spriteMaterial = new THREE.SpriteMaterial({ map: cryTexture });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(12, 12, 1); // スプライトのサイズを調整
-            return sprite as THREE.Object3D;
-          } else {
-            // smile_sun.jpg を使用
-            const spriteMaterial = new THREE.SpriteMaterial({ map: sunTexture });
-            const sprite = new THREE.Sprite(spriteMaterial);
-            sprite.scale.set(12, 12, 1); // スプライトのサイズを調整
-            return sprite as THREE.Object3D;
-          }
+      
+          const texture = connectedLink && connectedLink.value >= 20 ? sunTexture : cryTexture;
+          const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+          const sprite = new THREE.Sprite(spriteMaterial);
+          sprite.scale.set(12, 12, 1); // スプライトのサイズを調整
+          group.add(sprite);
+      
+          // ラベル部分
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d')!;
+          const size = 80; // ラベルのキャンバスサイズ
+      
+          canvas.width = size;
+          canvas.height = size;
+      
+          context.clearRect(0, 0, size, size); // 背景は透明
+          context.fillStyle = 'white'; // テキスト色
+          context.font = '12px Arial'; // 小さいフォントサイズ
+          context.textAlign = 'center';
+          context.fillText(node.name || '名前不明', size / 2, size / 2 - 5);
+          context.fillText(
+            `状態: ${connectedLink && connectedLink.value >= 20 ? '笑顔' : '泣き顔'}`,
+            size / 2,
+            size / 2 + 10
+          );
+      
+          const textureCanvas = new THREE.CanvasTexture(canvas);
+          const labelMaterial = new THREE.SpriteMaterial({ map: textureCanvas });
+          const labelSprite = new THREE.Sprite(labelMaterial);
+          labelSprite.scale.set(6, 3, 1); // ラベルサイズを調整
+          labelSprite.position.set(0, 8, 0); // ラベルを画像の上に配置
+          group.add(labelSprite);
         }
+      
+        return group;
       }}
+      
       onEngineStop={() => {
         if (!isFocused && graphData.nodes.length > 0) {
           // フォーカスをID=1のノードに移動
