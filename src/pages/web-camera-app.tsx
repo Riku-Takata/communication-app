@@ -15,13 +15,20 @@ const RealTimeFaceRecognition: React.FC = () => {
 
   useEffect(() => {
     const loadModels = async () => {
-      const MODEL_URL = '/models';
-      await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
-      console.log('FaceAPIモデルがロードされました');
-      setModelsLoaded(true);
+      try {
+        const MODEL_URL = '/models';
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+          faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+          faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL),
+        ]);
+        console.log('FaceAPIモデルがロードされました');
+        setModelsLoaded(true);
+      } catch (error) {
+        console.error('モデルのロードに失敗しました:', error);
+        setModelsLoaded(false);
+      }
     };
 
     const loadMembers = async () => {
