@@ -117,7 +117,7 @@ const RealTimeFaceRecognition: React.FC = () => {
           }
 
           // ID=1の人物がカメラにいるか確認
-          if (member.id === 1 && distance < 0.6) {
+          if (member.id === 2 && distance < 0.6) {
             id1Detected = true;
 
             // 感情を取得
@@ -136,7 +136,7 @@ const RealTimeFaceRecognition: React.FC = () => {
 
     // デスクの持ち主がいて、ID=1の人が認識された場合にデータ挿入
     if (ownerDetected && id1Detected) {
-      console.log(`デスクの持ち主とID=1の人物がカメラに認識されました (感情: ${id1Expression})`);
+      console.log(`デスクの持ち主と高田さんがカメラに認識されました！ (感情: ${id1Expression})`);
 
       // コミュニケーション量を設定（笑顔の場合は5、それ以外は1）
       const communicationVolume = id1Expression === 'happy' ? 5 : 1;
@@ -163,13 +163,13 @@ const RealTimeFaceRecognition: React.FC = () => {
         setIsCommunications(true);
       }
     } else if (id1Detected) {
-      console.log(`ID=1の人がカメラにいますが、デスクの持ち主がいません(感情: ${id1Expression})`);
+      console.log(`高田さんがカメラにいますが、デスクの持ち主がいません`);
       setIsCommunications(false);
     } else if (ownerDetected) {
-      console.log(`デスクの持ち主がいますが、ID=1の人がいません(感情: ${id1Expression})`);
+      console.log(`デスクの持ち主がいますが、高田さんがいません`);
       setIsCommunications(false);
     } else {
-      console.log(`別の人がカメラに映っています。(感情: ${id1Expression})`);
+      console.log(`別の人がカメラに映っています。`);
       setIsCommunications(false);
     }
 
