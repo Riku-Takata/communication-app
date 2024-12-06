@@ -6,11 +6,12 @@ import { supabase } from '../lib/SupabaseClient';
 const RealTimeFaceRecognition: React.FC = () => {
   const webcamRef = useRef<Webcam>(null);
   const [members, setMembers] = useState<{ id: number; name: string; descriptor: Float32Array | null }[]>([]);
-  const [deskOwner, setDeskOwner] = useState<number | null>(null); // デスクの持ち主
+  const [deskOwner, setDeskOwner] = useState<number | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [deskOwnerPresent, setDeskOwnerPresent] = useState(false); // デスクの持ち主がカメラにいるかどうか
+  const [deskOwnerPresent, setDeskOwnerPresent] = useState(false);
   const [isCommunications, setIsCommunications] = useState(false);
   const [isEmotional, setIsEmotional] = useState(false);
+  const [modelsLoaded, setModelsLoaded] = useState(false);
 
   useEffect(() => {
     const loadModels = async () => {
@@ -18,8 +19,9 @@ const RealTimeFaceRecognition: React.FC = () => {
       await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
       await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
       await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL); // 感情検出モデルのロード
+      await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
       console.log('FaceAPIモデルがロードされました');
+      setModelsLoaded(true);
     };
 
     const loadMembers = async () => {
@@ -58,14 +60,13 @@ const RealTimeFaceRecognition: React.FC = () => {
     }
   };
 
-  const getFaceDescriptorsAndExpressionsFromWebcam = async () => {
+  const getFaceDescriptorsAndExpressionsFromWebcam = useCallback(async () => {
     if (!webcamRef.current || !webcamRef.current.video) {
       console.error('Webカメラが利用できません');
       return [];
     }
 
-    // モデルがロードされているか確認
-    if (!faceapi.nets.faceRecognitionNet.isLoaded || !faceapi.nets.faceExpressionNet.isLoaded) {
+    if (!modelsLoaded) {
       console.error('モデルがロードされていません');
       return [];
     }
@@ -77,33 +78,32 @@ const RealTimeFaceRecognition: React.FC = () => {
         .detectAllFaces(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }))
         .withFaceLandmarks()
         .withFaceDescriptors()
-        .withFaceExpressions(); // 感情検出を追加
+        .withFaceExpressions();
 
       return detections;
     } catch (error) {
       console.error('Webカメラから顔特徴量や感情を取得中にエラーが発生しました:', error);
       return [];
     }
-  };
+  }, [modelsLoaded]);
 
   const identifyMember = useCallback(async () => {
-    if (isProcessing || !deskOwner) return; // デスクの持ち主が選択されていない場合スキップ
+    if (isProcessing || !deskOwner || !modelsLoaded) return;
 
     setIsProcessing(true);
 
     const detections = await getFaceDescriptorsAndExpressionsFromWebcam();
     if (!detections || detections.length === 0) {
       console.error('顔が検出されませんでした');
-      setDeskOwnerPresent(false); // 持ち主がいないとみなす
+      setDeskOwnerPresent(false);
       setIsProcessing(false);
       return;
     }
 
     let ownerDetected = false;
     let id1Detected = false;
-    let id1Expression = ''; // ID=1の感情
+    let id1Expression = '';
 
-    // デスクの持ち主とID=1を検出
     detections.forEach((detection) => {
       const descriptor = detection.descriptor;
 
@@ -111,20 +111,16 @@ const RealTimeFaceRecognition: React.FC = () => {
         if (member.descriptor) {
           const distance = faceapi.euclideanDistance(descriptor, member.descriptor);
 
-          // デスクの持ち主がカメラにいるか確認
           if (member.id === deskOwner && distance < 0.6) {
             ownerDetected = true;
           }
 
-          // ID=1の人物がカメラにいるか確認
           if (member.id === 2 && distance < 0.6) {
             id1Detected = true;
 
-            // 感情を取得
-            // 感情を取得して最も強い感情を取得するロジック
             const expressions = detection.expressions;
             const maxExpression = Object.keys(expressions).reduce((a, b) =>
-              (expressions[a as keyof faceapi.FaceExpressions] > expressions[b as keyof faceapi.FaceExpressions] ? a : b)
+              expressions[a as keyof faceapi.FaceExpressions] > expressions[b as keyof faceapi.FaceExpressions] ? a : b
             );
             id1Expression = maxExpression;
           }
@@ -132,25 +128,16 @@ const RealTimeFaceRecognition: React.FC = () => {
       });
     });
 
-    setDeskOwnerPresent(ownerDetected); // デスクの持ち主がいるかどうかを更新
+    setDeskOwnerPresent(ownerDetected);
 
-    // デスクの持ち主がいて、ID=1の人が認識された場合にデータ挿入
     if (ownerDetected && id1Detected) {
-      console.log(`デスクの持ち主と高田さんがカメラに認識されました！ (感情: ${id1Expression})`);
-
-      // コミュニケーション量を設定（笑顔の場合は5、それ以外は1）
       const communicationVolume = id1Expression === 'happy' ? 5 : 1;
-      if (id1Expression === 'happy') {
-        setIsEmotional(true)
-      }else {
-        setIsEmotional(false)
-      }
+      setIsEmotional(id1Expression === 'happy');
 
-      // Supabase communicationテーブルに挿入
       const { error } = await supabase.from('communication').insert([
         {
-          sender_id: 1, // ID=1の人
-          receiver_id: deskOwner, // デスクの持ち主
+          sender_id: 1,
+          receiver_id: deskOwner,
           communication_date: new Date().toISOString(),
           communication_volume: communicationVolume,
         },
@@ -163,23 +150,23 @@ const RealTimeFaceRecognition: React.FC = () => {
         setIsCommunications(true);
       }
     } else if (id1Detected) {
-      console.log(`高田さんがカメラにいますが、デスクの持ち主がいません`);
+      console.log('高田さんがカメラにいますが、デスクの持ち主がいません');
       setIsCommunications(false);
     } else if (ownerDetected) {
-      console.log(`デスクの持ち主がいますが、高田さんがいません`);
+      console.log('デスクの持ち主がいますが、高田さんがいません');
       setIsCommunications(false);
     } else {
-      console.log(`別の人がカメラに映っています。`);
+      console.log('別の人がカメラに映っています。');
       setIsCommunications(false);
     }
 
     setIsProcessing(false);
-  }, [members, deskOwner, isProcessing]);
+  }, [members, deskOwner, modelsLoaded, isProcessing, getFaceDescriptorsAndExpressionsFromWebcam]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
       identifyMember();
-    }, 2000); // 2秒ごとに実行
+    }, 2000);
 
     return () => clearInterval(intervalId);
   }, [identifyMember]);
@@ -206,12 +193,11 @@ const RealTimeFaceRecognition: React.FC = () => {
         </p>
       </div>
       <p style={{ color: 'red' }}>
-        {isCommunications ?
-          isEmotional ?
-            'communication happened!! & Happy!!'
+        {isCommunications
+          ? isEmotional
+            ? 'communication happened!! & Happy!!'
             : 'communication happened!!'
-          : ''
-        }
+          : ''}
       </p>
       <Webcam ref={webcamRef} style={{ width: '100%', height: 'auto' }} />
     </div>
