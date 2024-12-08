@@ -24,8 +24,8 @@ const NetworkGraph: React.FC = () => {
   const maxVolume = useMemo(() => (volumes.length > 0 ? Math.max(...volumes) : 0), [volumes]);
 
   // エッジの最小・最大長を定義
-  const minDistance = 10; // 最小のエッジ長
-  const maxDistance = 80; // 最大のエッジ長
+  const minDistance = 7; // 最小のエッジ長
+  const maxDistance = 120; // 最大のエッジ長
 
   useEffect(() => {
     // 初期データの取得
@@ -78,7 +78,7 @@ const NetworkGraph: React.FC = () => {
   }, [graphData, minVolume, maxVolume]);
 
   const focusOnNode = (node: NodeObject) => {
-    const distance = 80;
+    const distance = 55;
     const nodeX = node.x ?? 0;
     const nodeY = node.y ?? 0;
     const nodeZ = node.z ?? 0;
@@ -146,15 +146,71 @@ const NetworkGraph: React.FC = () => {
       nodeThreeObject={(node) => {
         // ノード全体をまとめるグループを作成
         const group = new THREE.Group();
-      
+
         if (node.id === 1) {
-          // ID=1の場合は青い球体を作成
-          const sphereGeometry = new THREE.SphereGeometry(5, 32, 32); // 球体のサイズと分割数
-          const sphereMaterial = new THREE.MeshBasicMaterial({ color: 'blue' }); // 青色のマテリアル
-          const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-          group.add(sphere);
+          // id=1 の場合のロジック
+          const allReceivers = graphData.nodes.filter((n) => n.id !== 1); // id=1以外のノードを取得
+          const hasAnyLowCommunication = graphData.links.some((link) => {
+            return link.source === 1 && link.value < 20; // id=1 から他のノードへのコミュニケーション量が 20 未満
+          });
+
+          const isCommunicatingWellWithAll =
+            allReceivers.length > 0 &&
+            !hasAnyLowCommunication && // id=1が全員と20回以上コミュニケーションを取っているか
+            allReceivers.every((receiver) =>
+              graphData.links.some(
+                (link) =>
+                  link.source === 1 &&
+                  link.target === receiver.id &&
+                  link.value >= 20
+              )
+            );
+
+          // URLを選択
+          const textureLoader = new THREE.TextureLoader();
+          const textureUrl = isCommunicatingWellWithAll
+            ? node.smile_image_url // 全員と20回以上コミュニケーションの場合
+            : node.tearful_image_url; // 1人でも20回未満の場合
+          const texture = textureLoader.load(textureUrl);
+
+          // スプライト作成
+          const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+          const sprite = new THREE.Sprite(spriteMaterial);
+          sprite.scale.set(12, 12, 1); // スプライトサイズ
+          group.add(sprite);
+
+          // ラベル部分
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d')!;
+          const canvasWidth = 2048; // キャンバスの幅（解像度を高めに設定）
+          const canvasHeight = 1024; // キャンバスの高さ
+
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+
+          context.clearRect(0, 0, canvasWidth, canvasHeight); // 背景をクリア
+          context.fillStyle = 'white'; // テキストの色
+          context.font = '100px Arial'; // フォントサイズを調整
+          context.textAlign = 'center';
+          context.textBaseline = 'middle'; // テキストの基準線を中央に設定
+          context.fillText(
+            `全然コミュニケーション取れてないよ...`,
+            canvasWidth / 2, // キャンバス中央のX座標
+            canvasHeight / 2 // キャンバス中央のY座標
+          );
+
+          const textureCanvas = new THREE.CanvasTexture(canvas);
+          const labelMaterial = new THREE.SpriteMaterial({ map: textureCanvas });
+          const labelSprite = new THREE.Sprite(labelMaterial);
+
+          // スプライトのスケーリング（サイズを適切に調整）
+          labelSprite.scale.set(12, 6, 1); // スプライトの横幅と高さを調整
+
+          // スプライトの位置を調整（画像の上に配置）
+          labelSprite.position.set(0, 8, 0);
+          group.add(labelSprite);
         } else {
-          // その他のノードは画像で表示
+          // その他ノードの場合のロジック
           const connectedLink = graphData.links.find((link) => {
             const sourceId = getNodeId(link.source);
             const targetId = getNodeId(link.target);
@@ -163,37 +219,47 @@ const NetworkGraph: React.FC = () => {
               (targetId === node.id && sourceId === 1)
             );
           });
-      
-          const texture = connectedLink && connectedLink.value >= 20 ? sunTexture : cryTexture;
+
+          const textureLoader = new THREE.TextureLoader();
+          const isSmiling = connectedLink && connectedLink.value >= 20;
+          const textureUrl = isSmiling ? node.smile_image_url : node.tearful_image_url;
+          const texture = textureLoader.load(textureUrl);
+
+          // スプライト作成
           const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
           const sprite = new THREE.Sprite(spriteMaterial);
-          sprite.scale.set(12, 12, 1); // スプライトのサイズを調整
+          sprite.scale.set(isSmiling ? 8 : 16, isSmiling ? 8 : 16, 1); // 笑顔は小さく、泣き顔は大きく
           group.add(sprite);
       
           // ラベル部分
           const canvas = document.createElement('canvas');
           const context = canvas.getContext('2d')!;
-          const size = 80; // ラベルのキャンバスサイズ
-      
-          canvas.width = size;
-          canvas.height = size;
-      
-          context.clearRect(0, 0, size, size); // 背景は透明
-          context.fillStyle = 'white'; // テキスト色
-          context.font = '12px Arial'; // 小さいフォントサイズ
+          const canvasWidth = 2048; // キャンバスの幅（解像度を高めに設定）
+          const canvasHeight = 1024; // キャンバスの高さ
+
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+
+          context.clearRect(0, 0, canvasWidth, canvasHeight); // 背景をクリア
+          context.fillStyle = 'white'; // テキストの色
+          context.font = '100px Arial'; // フォントサイズを調整
           context.textAlign = 'center';
-          context.fillText(node.name || '名前不明', size / 2, size / 2 - 5);
+          context.textBaseline = 'middle'; // テキストの基準線を中央に設定
           context.fillText(
-            `状態: ${connectedLink && connectedLink.value >= 20 ? '笑顔' : '泣き顔'}`,
-            size / 2,
-            size / 2 + 10
+            node.name + `${connectedLink && connectedLink.value >= 20 ? '「うれしい！！！！！」' : '「嫌われてるのかな...」'}`,
+            canvasWidth / 2, // キャンバス中央のX座標
+            canvasHeight / 2 // キャンバス中央のY座標
           );
-      
+
           const textureCanvas = new THREE.CanvasTexture(canvas);
           const labelMaterial = new THREE.SpriteMaterial({ map: textureCanvas });
           const labelSprite = new THREE.Sprite(labelMaterial);
-          labelSprite.scale.set(6, 3, 1); // ラベルサイズを調整
-          labelSprite.position.set(0, 8, 0); // ラベルを画像の上に配置
+
+          // スプライトのスケーリング（サイズを適切に調整）
+          labelSprite.scale.set(12, 6, 1); // スプライトの横幅と高さを調整
+
+          // スプライトの位置を調整（画像の上に配置）
+          labelSprite.position.set(0, 8, 0);
           group.add(labelSprite);
         }
       

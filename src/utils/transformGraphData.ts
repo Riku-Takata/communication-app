@@ -45,12 +45,16 @@ export const fetchGraphData = async (): Promise<GraphData> => {
     id: senderData[0].id,
     name: senderData[0].name,
     group: 'Sender',
+    smile_image_url: senderData[0].smile_image_url,
+    tearful_image_url: senderData[0].tearful_image_url,
   };
 
   const receiverNodes: NodeObject[] = (receiversData || []).map(member => ({
     id: member.id,
     name: member.name,
     group: 'Receiver',
+    smile_image_url: member.smile_image_url,
+    tearful_image_url: member.tearful_image_url,
   }));
 
   const nodes = [senderNode, ...receiverNodes];
