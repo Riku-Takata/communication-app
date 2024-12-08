@@ -15,8 +15,6 @@ const NetworkGraph: React.FC = () => {
 
   // 画像テクスチャの読み込み
   const textureLoader = new THREE.TextureLoader();
-  const sunTexture = useMemo(() => textureLoader.load('/smile_sun.jpg'), [textureLoader]);
-  const cryTexture = useMemo(() => textureLoader.load('/cry_girl.png'), [textureLoader]);
 
   // コミュニケーション量の最小・最大値を計算
   const volumes = useMemo(() => graphData.links.map((link) => link.value), [graphData.links]);
