@@ -13,9 +13,6 @@ const NetworkGraph: React.FC = () => {
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [isFocused, setIsFocused] = useState(false);
 
-  // 画像テクスチャの読み込み
-  const textureLoader = new THREE.TextureLoader();
-
   // コミュニケーション量の最小・最大値を計算
   const volumes = useMemo(() => graphData.links.map((link) => link.value), [graphData.links]);
   const minVolume = useMemo(() => (volumes.length > 0 ? Math.min(...volumes) : 0), [volumes]);
