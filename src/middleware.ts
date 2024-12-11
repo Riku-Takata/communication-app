@@ -1,31 +1,22 @@
-// middleware.ts
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export function middleware(req: Request) {
+export const config = {
+  matcher: ['/', '/index', '/web-camera-app'],
+}
+
+export function middleware(req: NextRequest) {
   const basicAuth = req.headers.get('authorization')
-  if (!basicAuth) {
-    return new NextResponse('Authentication required', {
-      status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Secure Area"'
-      }
-    })
-  }
+  const url = req.nextUrl
 
-  const authValue = basicAuth.split(' ')[1]
-  const [user, password] = atob(authValue).split(':')
+  if (basicAuth) {
+    const authValue = basicAuth.split(' ')[1]
+    const [user, pwd] = atob(authValue).split(':')
 
-  if (
-    user === process.env.BASIC_ID &&
-    password === process.env.BASIC_PWD
-  ) {
-    return NextResponse.next()
-  }
-
-  return new NextResponse('Authentication required', {
-    status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="Secure Area"'
+    if (user === process.env.BASIC_ID && pwd === process.env.BASIC_PWD) {
+      return NextResponse.next()
     }
-  })
+  }
+  url.pathname = '/api/auth'
+
+  return NextResponse.rewrite(url)
 }
