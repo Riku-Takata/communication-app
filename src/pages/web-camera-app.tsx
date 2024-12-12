@@ -49,10 +49,11 @@ const RealTimeFaceRecognition: React.FC = () => {
       const membersWithDescriptors = await Promise.all(
         data.map(async (member: { id: number; name: string; image_url: string }) => {
           const descriptor = await getFaceDescriptorFromUrl(member.image_url);
-          if (descriptor) {
-            return { id: member.id, name: member.name, descriptors: [descriptor] };
+          if (!descriptor) {
+            console.log(`顔特徴量の抽出に失敗したメンバー: ID=${member.id}, Name=${member.name}, ImageURL=${member.image_url}`);
+            return null;
           }
-          return null;
+          return { id: member.id, name: member.name, descriptors: [descriptor] };
         })
       );
 
@@ -211,7 +212,6 @@ const RealTimeFaceRecognition: React.FC = () => {
         console.log('communicationテーブルにデータを挿入しました');
         setIsCommunications(true);
       }
-      setIsCommunications(false);
     } else if (ownerDetected) {
       console.log('デスクの持ち主がいますが、中川さんがいません');
       setIsCommunications(false);
