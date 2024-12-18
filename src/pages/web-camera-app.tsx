@@ -142,8 +142,8 @@ const RealTimeFaceRecognition: React.FC = () => {
         ownerDetected = true;
       }
 
-      // 特定のメンバー（例: 中川さん）のチェック
-      if (bestMatch.label === '中川' && bestMatch.distance < 0.6) {
+      // 特定のメンバー（例: 高田さん）のチェック
+      if (bestMatch.label === '高田' && bestMatch.distance < 0.6) {
         id1Detected = true;
 
         const expressions = detection.expressions;
@@ -156,7 +156,7 @@ const RealTimeFaceRecognition: React.FC = () => {
       // デスクの持ち主でも中川さんでもない場合、他の人として収集
       if (
         bestMatch.label !== deskOwner &&
-        bestMatch.label !== '中川' &&
+        bestMatch.label !== '高田' &&
         bestMatch.distance < 0.6 &&
         bestMatch.label !== 'unknown' // 'unknown' を除外
       ) {
@@ -176,7 +176,7 @@ const RealTimeFaceRecognition: React.FC = () => {
       if (deskOwnerId !== null) {
         const { error } = await supabase.from('communication').insert([
           {
-            sender_id: 1,
+            sender_id: 11,
             receiver_id: deskOwnerId,
             communication_date: new Date().toISOString(),
             communication_volume: communicationVolume,
@@ -193,13 +193,13 @@ const RealTimeFaceRecognition: React.FC = () => {
         console.error('デスクの持ち主のIDが見つかりません');
       }
     } else if (id1Detected) {
-      console.log('中川さんがカメラにいますが、デスクの持ち主がいません');
+      console.log('高田さんがカメラにいますが、デスクの持ち主がいません');
 
       const deskOwnerMember = members.find(member => member.name === deskOwner);
       const deskOwnerId = deskOwnerMember ? deskOwnerMember.id : null;
       const { error } = await supabase.from('communication').insert([
         {
-          sender_id: 1,
+          sender_id: 11,
           receiver_id: deskOwnerId,
           communication_date: new Date().toISOString(),
           communication_volume: 1,
@@ -213,7 +213,7 @@ const RealTimeFaceRecognition: React.FC = () => {
         setIsCommunications(true);
       }
     } else if (ownerDetected) {
-      console.log('デスクの持ち主がいますが、中川さんがいません');
+      console.log('デスクの持ち主がいますが、高田さんがいません');
       setIsCommunications(false);
     } else if (otherLabels.length > 0) { // 他の人が検出された場合
       console.log(`別の人がカメラに映っています: ${otherLabels.join(', ')}`);

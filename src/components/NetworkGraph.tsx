@@ -30,7 +30,7 @@ const NetworkGraph: React.FC = () => {
     const updatedNodes = weekData.nodes.map(node => {
       // node.idが1以外の場合、dailyValue設定
       // sender(id=1)にもdailyValue付けるなら下記条件分岐は不要
-      const dVal = node.id === 1 ? 0 : (dailyVolumes[node.id] || 0);
+      const dVal = node.id === 11 ? 0 : (dailyVolumes[node.id] || 0);
       return { ...node, dailyValue: dVal };
     });
 
@@ -38,18 +38,18 @@ const NetworkGraph: React.FC = () => {
     const totalSenderWeeklyVolume = updatedLinks
     .filter(link => {
       const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-      return sourceId === 1;
+      return sourceId === 11;
     })
     .reduce((acc, link) => acc + (link.value || 0), 0);
 
     // Check if sender communicated with all other members today
     const allCommunicated = updatedNodes
-    .filter(node => node.id !== 1)
+    .filter(node => node.id !== 11)
     .every(node => node.dailyValue > 0);
 
     // If all receivers have daily communication, set sender's dailyValue to 1
     const finalNodes = updatedNodes.map(node => {
-    if (node.id === 1) {
+    if (node.id === 11) {
       return { 
         ...node, 
         dailyValue: allCommunicated ? 1 : 0,
@@ -88,7 +88,7 @@ const NetworkGraph: React.FC = () => {
   const maxVolume = useMemo(() => (volumes.length > 0 ? Math.max(...volumes) : 0), [volumes]);
 
   const minDistance = 15; 
-  const maxDistance = 100; 
+  const maxDistance = 80; 
 
   useEffect(() => {
     if (fgRef.current && graphData.links.length > 0) {
@@ -105,7 +105,7 @@ const NetworkGraph: React.FC = () => {
   }, [graphData, minVolume, maxVolume]);
 
   const focusOnNode = (node: NodeObject) => {
-    const distance = 75;
+    const distance = 65;
     const nodeX = node.x ?? 0;
     const nodeY = node.y ?? 0;
     const nodeZ = node.z ?? 0;
@@ -130,7 +130,7 @@ const NetworkGraph: React.FC = () => {
       nodeLabel="name"
       // ノードの画像や表情は当日のコミュニケーションで判定
       nodeVal={(node) => {
-        if (node.id === 1) return 8;
+        if (node.id === 11) return 8;
 
         // 当日1回でもコミュニケーションがあれば小さく、なければデフォルトなど自由に決定可能
         // ここでは特にロジック変えずそのまま
@@ -139,8 +139,8 @@ const NetworkGraph: React.FC = () => {
           const targetId = getNodeId(link.target);
 
           return (
-            (sourceId === node.id && targetId === 1) ||
-            (targetId === node.id && sourceId === 1)
+            (sourceId === node.id && targetId === 11) ||
+            (targetId === node.id && sourceId === 11)
           );
         });
 
@@ -158,7 +158,7 @@ const NetworkGraph: React.FC = () => {
         return distance < threshold ? 3 : 5; 
       }}
       nodeColor={(node) => {
-        if (node.id === 1) return 'blue';
+        if (node.id === 11) return 'blue';
         return 'gray';
       }}
       nodeThreeObject={(node) => {
@@ -174,14 +174,14 @@ const NetworkGraph: React.FC = () => {
         const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
         
         // Check the sender's weekly volume
-        if (node.id === 1 && (node.weeklyVolume || 0) < 80) {
+        if (node.id === 11 && (node.weeklyVolume || 0) < 100) {
           spriteMaterial.transparent = true;
           spriteMaterial.opacity = 0.5; // Adjust as desired
         }
 
         const sprite = new THREE.Sprite(spriteMaterial);
 
-        if (node.id === 1) {
+        if (node.id === 11) {
           // senderの場合、当日のコミュニケーションチェック
           // 送信者も当日誰かと1回でもコミュニケーションあれば笑顔、なければ涙など自由に決定可能
           sprite.scale.set(12, 12, 1);
@@ -251,7 +251,7 @@ const NetworkGraph: React.FC = () => {
       onEngineStop={() => {
         if (!isFocused && graphData.nodes.length > 0) {
           setTimeout(() => {
-            const node = graphData.nodes.find((node) => node.id === 1);
+            const node = graphData.nodes.find((node) => node.id === 11);
             if (node && node.x !== undefined && node.y !== undefined && node.z !== undefined) {
               focusOnNode(node);
               setIsFocused(true);

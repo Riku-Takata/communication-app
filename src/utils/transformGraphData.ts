@@ -21,7 +21,7 @@ export const fetchGraphData = async (): Promise<GraphData> => {
   const { data: senderData, error: senderError } = await supabase
     .from('member')
     .select('id, name, smile_image_url, tearful_image_url, tearful_emotion1, tearful_emotion2, smile_emotion1, smile_emotion2')
-    .eq('id', 1);
+    .eq('id', 11);
 
   if (senderError || !senderData || senderData.length === 0) {
     console.error('Error fetching sender member:', senderError);
