@@ -34,7 +34,33 @@ const NetworkGraph: React.FC = () => {
       return { ...node, dailyValue: dVal };
     });
 
-    setGraphData({ nodes: updatedNodes, links: updatedLinks });
+    // Calculate sender's total weekly volume
+    const totalSenderWeeklyVolume = updatedLinks
+    .filter(link => {
+      const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
+      return sourceId === 1;
+    })
+    .reduce((acc, link) => acc + (link.value || 0), 0);
+
+    // Check if sender communicated with all other members today
+    const allCommunicated = updatedNodes
+    .filter(node => node.id !== 1)
+    .every(node => node.dailyValue > 0);
+
+    // If all receivers have daily communication, set sender's dailyValue to 1
+    const finalNodes = updatedNodes.map(node => {
+    if (node.id === 1) {
+      return { 
+        ...node, 
+        dailyValue: allCommunicated ? 1 : 0,
+        weeklyVolume: totalSenderWeeklyVolume 
+      };
+    }
+    return node;
+    });
+
+    setGraphData({ nodes: finalNodes, links: updatedLinks });
+
   };
 
   useEffect(() => {
@@ -138,16 +164,21 @@ const NetworkGraph: React.FC = () => {
       nodeThreeObject={(node) => {
         const group = new THREE.Group();
 
-        // 当日コミュニケーションを基準に表情決定
-        // dailyValueが1以上ならisSmilingにしてみる（要件に応じて変更）
         const dailyVal = node.dailyValue || 0;
-        const isSmiling = dailyVal > 0; 
+        const isSmiling = dailyVal > 0;
 
         const textureLoader = new THREE.TextureLoader();
         const textureUrl = isSmiling ? node.smile_image_url : node.tearful_image_url;
         const texture = textureLoader.load(textureUrl);
 
         const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+        
+        // Check the sender's weekly volume
+        if (node.id === 1 && (node.weeklyVolume || 0) < 80) {
+          spriteMaterial.transparent = true;
+          spriteMaterial.opacity = 0.5; // Adjust as desired
+        }
+
         const sprite = new THREE.Sprite(spriteMaterial);
 
         if (node.id === 1) {
