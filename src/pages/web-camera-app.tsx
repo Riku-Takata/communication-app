@@ -195,23 +195,23 @@ const RealTimeFaceRecognition: React.FC = () => {
     } else if (id1Detected) {
       console.log('高田さんがカメラにいますが、デスクの持ち主がいません');
 
-      const deskOwnerMember = members.find(member => member.name === deskOwner);
-      const deskOwnerId = deskOwnerMember ? deskOwnerMember.id : null;
-      const { error } = await supabase.from('communication').insert([
-        {
-          sender_id: 11,
-          receiver_id: deskOwnerId,
-          communication_date: new Date().toISOString(),
-          communication_volume: 1,
-        },
-      ]);
+      // const deskOwnerMember = members.find(member => member.name === deskOwner);
+      // const deskOwnerId = deskOwnerMember ? deskOwnerMember.id : null;
+      // const { error } = await supabase.from('communication').insert([
+      //   {
+      //     sender_id: 11,
+      //     receiver_id: deskOwnerId,
+      //     communication_date: new Date().toISOString(),
+      //     communication_volume: 1,
+      //   },
+      // ]);
 
-      if (error) {
-        console.error('communicationテーブルへのデータ挿入に失敗しました:', error);
-      } else {
-        console.log('communicationテーブルにデータを挿入しました');
-        setIsCommunications(true);
-      }
+      // if (error) {
+      //   console.error('communicationテーブルへのデータ挿入に失敗しました:', error);
+      // } else {
+      //   console.log('communicationテーブルにデータを挿入しました');
+      //   setIsCommunications(true);
+      // }
     } else if (ownerDetected) {
       console.log('デスクの持ち主がいますが、高田さんがいません');
       setIsCommunications(false);
