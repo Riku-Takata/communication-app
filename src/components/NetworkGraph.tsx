@@ -13,6 +13,8 @@ const NetworkGraph: React.FC = () => {
 
   const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
   const [isFocused, setIsFocused] = useState(false);
+  const [allCommunicated, setAllCommunicated] = useState(false);
+
 
   // グラフデータ取得時に1週間分と当日分を両方取得
   const loadData = async () => {
@@ -58,6 +60,8 @@ const NetworkGraph: React.FC = () => {
     }
     return node;
     });
+
+    setAllCommunicated(allCommunicated);
 
     setGraphData({ nodes: finalNodes, links: updatedLinks });
 
@@ -128,6 +132,7 @@ const NetworkGraph: React.FC = () => {
       ref={fgRef}
       graphData={graphData}
       nodeLabel="name"
+      backgroundColor={allCommunicated ? "white" : "black"}
       // ノードの画像や表情は当日のコミュニケーションで判定
       nodeVal={(node) => {
         if (node.id === 11) return 8;
@@ -230,7 +235,7 @@ const NetworkGraph: React.FC = () => {
           canvas.height = canvasHeight;
 
           context.clearRect(0, 0, canvasWidth, canvasHeight); 
-          context.fillStyle = 'white'; 
+          context.fillStyle = allCommunicated ? 'black' : 'white'
           context.font = '100px Arial'; 
           context.textAlign = 'center';
           context.textBaseline = 'middle'; 
